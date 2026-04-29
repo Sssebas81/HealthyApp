@@ -12,22 +12,29 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
 
+  // Solo verificar token al montar el componente y cuando cambia la ruta
   useEffect(() => {
     const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
-  }, [pathname, user]);
+    const userData = localStorage.getItem('user');
+    setIsLoggedIn(!!token && !!userData);
+  }, [pathname]); // Solo dependencia de pathname, no de user
 
   const handleLogout = () => {
     logout();
     router.push('/');
   };
 
+  // No mostrar navbar en login y register
+  if (pathname === '/login' || pathname === '/register') {
+    return null;
+  }
+
   return (
     <>
       <nav className="bg-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="text-2xl font-bold bg-linear-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+            <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
               HealthyIA
             </Link>
             
@@ -37,7 +44,7 @@ export default function Navbar() {
                   <Link href="/login" className="text-gray-700 hover:text-green-600 transition">
                     Iniciar Sesión
                   </Link>
-                  <Link href="/register" className="bg-linear-to-r from-green-500 to-blue-500 text-white px-4 py-2 rounded-lg hover:opacity-90 transition">
+                  <Link href="/register" className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-4 py-2 rounded-lg hover:opacity-90 transition">
                     Registrarse
                   </Link>
                 </>
@@ -48,7 +55,7 @@ export default function Navbar() {
                     className="flex items-center space-x-2 text-gray-700 hover:text-green-600 transition"
                   >
                     <span>👤</span>
-                    <span>{user?.name?.split(' ')[0]}</span>
+                    <span>{user?.name?.split(' ')[0] || 'Usuario'}</span>
                   </button>
                   <button onClick={handleLogout} className="text-gray-700 hover:text-red-600 transition">
                     Cerrar Sesión

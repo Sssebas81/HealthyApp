@@ -5,6 +5,19 @@ import { useApp } from '@/context/AppContext';
 import PreferenciasAlimenticias from '@/components/PreferenciasAlimenticias';
 import type { PreferenciasUsuario } from '@/types';
 
+// Mapeo de nombres de alimentos para mostrar
+const nombresAlimentos: Record<string, string> = {
+  'pollo': 'Pollo', 'pescado': 'Pescado', 'huevos': 'Huevos', 'carne_magra': 'Carne magra',
+  'tofu': 'Tofu', 'lentejas': 'Lentejas', 'arroz_integral': 'Arroz integral', 'quinoa': 'Quinoa',
+  'avena': 'Avena', 'papa': 'Papa o batata', 'pan_integral': 'Pan integral', 'brocoli': 'Brocoli',
+  'espinacas': 'Espinacas', 'zanahoria': 'Zanahoria', 'tomate': 'Tomate', 'pepino': 'Pepino',
+  'pimiento': 'Pimiento', 'manzana': 'Manzana', 'platano': 'Platano', 'naranja': 'Naranja',
+  'fresas': 'Fresas', 'kiwi': 'Kiwi', 'arandanos': 'Arandanos', 'aguacate': 'Aguacate',
+  'aceite_oliva': 'Aceite de oliva', 'nueces': 'Nueces', 'almendras': 'Almendras',
+  'semillas_chia': 'Semillas de chia', 'yogur_griego': 'Yogur griego', 'leche': 'Leche',
+  'queso': 'Queso fresco', 'requeson': 'Requeson'
+};
+
 export default function Dashboard() {
   const [peso, setPeso] = useState<string>('');
   const [altura, setAltura] = useState<string>('');
@@ -14,15 +27,53 @@ export default function Dashboard() {
   const [objetivo, setObjetivo] = useState<string>('');
   const [generando, setGenerando] = useState<boolean>(false);
   const [mostrarInfoIMC, setMostrarInfoIMC] = useState<boolean>(false);
-  const { user, setUser, preferencias, setPreferencias, agregarPlan, actualizarPreferencias } = useApp();
+  const [mostrarResumenAlimentos, setMostrarResumenAlimentos] = useState<boolean>(false);
+  const [cargandoUsuario, setCargandoUsuario] = useState<boolean>(true);
+  const { user, setUser, preferencias, setPreferencias, agregarPlan, actualizarPreferencias, cargarDatosUsuario } = useApp();
   const router = useRouter();
 
+  // Cargar usuario desde localStorage si el contexto no tiene usuario
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-    }
-  }, [router]);
+    const loadUserData = () => {
+      try {
+        const token = localStorage.getItem('token');
+        const userData = localStorage.getItem('user');
+        
+        console.log('Dashboard - Token:', !!token);
+        console.log('Dashboard - UserData:', userData);
+        
+        if (!token || !userData) {
+          console.log('No autenticado, redirigiendo a login');
+          router.push('/login');
+          return;
+        }
+        
+        // Si el contexto no tiene usuario, cargarlo manualmente
+        if (!user && userData) {
+          const parsedUser = JSON.parse(userData);
+          console.log('Cargando usuario manualmente:', parsedUser);
+          setUser(parsedUser);
+          
+          // También cargar preferencias
+          const allPreferencias = JSON.parse(localStorage.getItem('preferencias_usuarios') || '[]');
+          const userPrefs = allPreferencias.find((p: PreferenciasUsuario) => p.userId === parsedUser.id);
+          if (userPrefs) {
+            setPreferencias(userPrefs);
+          }
+        } else if (user) {
+          console.log('Usuario ya está en contexto:', user);
+        }
+      } catch (error) {
+        console.error('Error cargando usuario:', error);
+        router.push('/login');
+      } finally {
+        setCargandoUsuario(false);
+      }
+    };
+    
+    loadUserData();
+    cargarDatosUsuario();
+  }, [router, user, setUser, setPreferencias, cargarDatosUsuario]);
 
   const tieneDatosFisicos = user?.peso && user?.altura;
 
@@ -53,20 +104,51 @@ export default function Dashboard() {
           users[userIndex] = updatedUser;
           localStorage.setItem('users', JSON.stringify(users));
         }
+      } else {
+        // Si no hay usuario en contexto pero hay en localStorage
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const existingUser = JSON.parse(userData);
+          const updatedUser = { 
+            ...existingUser, 
+            peso: pesoNum, 
+            altura: alturaNum,
+            imc: nuevoImc,
+            pesoActualizado: new Date().toISOString()
+          };
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          
+          const users = JSON.parse(localStorage.getItem('users') || '[]');
+          const userIndex = users.findIndex((u: any) => u.id === existingUser.id);
+          if (userIndex !== -1) {
+            users[userIndex] = updatedUser;
+            localStorage.setItem('users', JSON.stringify(users));
+          }
+        }
       }
     }
   };
 
   const guardarPreferencias = (seleccionados: string[]) => {
     console.log('Guardando preferencias:', seleccionados);
-    console.log('Usuario actual:', user);
     
-    if (user && user.id) {
-      actualizarPreferencias(user.id, seleccionados);
+    // Intentar obtener usuario del contexto o localStorage
+    let currentUser = user;
+    if (!currentUser) {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        currentUser = JSON.parse(userData);
+      }
+    }
+    
+    if (currentUser && currentUser.id) {
+      actualizarPreferencias(currentUser.id, seleccionados);
       setMostrarPreferencias(false);
     } else {
       console.error('No hay usuario logueado');
       alert('Error: No se encontró usuario. Por favor, inicia sesión nuevamente.');
+      router.push('/login');
     }
   };
 
@@ -85,6 +167,15 @@ export default function Dashboard() {
     setGenerando(true);
     
     try {
+      // Obtener usuario actual
+      let currentUser = user;
+      if (!currentUser) {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          currentUser = JSON.parse(userData);
+        }
+      }
+      
       const response = await fetch('/api/generate-plan', {
         method: 'POST',
         headers: {
@@ -94,11 +185,11 @@ export default function Dashboard() {
           objetivo,
           preferencias: preferencias.itemsSeleccionados,
           user: {
-            id: user?.id,
-            name: user?.name,
-            peso: user?.peso,
-            altura: user?.altura,
-            imc: user?.imc
+            id: currentUser?.id,
+            name: currentUser?.name,
+            peso: currentUser?.peso,
+            altura: currentUser?.altura,
+            imc: currentUser?.imc
           }
         }),
       });
@@ -125,6 +216,45 @@ export default function Dashboard() {
     if (imcValor < 30) return { texto: "Sobrepeso - Enfocate en habitos saludables", color: "text-yellow-600" };
     return { texto: "Obesidad - Trabaja con un profesional de la salud", color: "text-red-600" };
   };
+
+  // Agrupar alimentos por tipo para mostrar mejor
+  const agruparAlimentosPorTipo = (items: string[]) => {
+    const tipos: Record<string, string[]> = {
+      proteinas: [], carbohidratos: [], grasas: [], vegetales: [], frutas: [], lacteos: []
+    };
+    
+    const mapaTipos: Record<string, string> = {
+      'pollo': 'proteinas', 'pescado': 'proteinas', 'huevos': 'proteinas', 'carne_magra': 'proteinas',
+      'tofu': 'proteinas', 'lentejas': 'proteinas', 'arroz_integral': 'carbohidratos', 'quinoa': 'carbohidratos',
+      'avena': 'carbohidratos', 'papa': 'carbohidratos', 'pan_integral': 'carbohidratos', 'brocoli': 'vegetales',
+      'espinacas': 'vegetales', 'zanahoria': 'vegetales', 'tomate': 'vegetales', 'pepino': 'vegetales',
+      'pimiento': 'vegetales', 'manzana': 'frutas', 'platano': 'frutas', 'naranja': 'frutas', 'fresas': 'frutas',
+      'kiwi': 'frutas', 'arandanos': 'frutas', 'aguacate': 'grasas', 'aceite_oliva': 'grasas', 'nueces': 'grasas',
+      'almendras': 'grasas', 'semillas_chia': 'grasas', 'yogur_griego': 'lacteos', 'leche': 'lacteos',
+      'queso': 'lacteos', 'requeson': 'lacteos'
+    };
+    
+    items.forEach(id => {
+      const tipo = mapaTipos[id] || 'otros';
+      if (tipos[tipo]) {
+        tipos[tipo].push(nombresAlimentos[id] || id);
+      }
+    });
+    
+    return tipos;
+  };
+
+  // Mostrar loading mientras se carga el usuario
+  if (cargandoUsuario) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando tu perfil...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (mostrarPreferencias) {
     return (
@@ -209,12 +339,17 @@ export default function Dashboard() {
     const alturaMostrar = altura || user?.altura;
     const recomendacion = getRecomendacionIMC(imcMostrar);
     
+    // Preparar resumen de alimentos seleccionados
+    const alimentosPorTipo = preferencias?.itemsSeleccionados?.length 
+      ? agruparAlimentosPorTipo(preferencias.itemsSeleccionados)
+      : null;
+    
     return (
       <div className="flex items-center justify-center min-h-[80vh] px-4 py-8">
         <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-4xl w-full">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              Hola, {user?.name}! 👋
+              Hola, {user?.name || 'Usuario'}! 👋
             </h1>
             <p className="text-gray-600">
               Basado en tus datos, vamos a crear tu plan nutricional personalizado
@@ -348,15 +483,54 @@ export default function Dashboard() {
                 {preferencias?.itemsSeleccionados?.length ? '✏️ Editar' : '➕ Agregar'}
               </button>
             </div>
+            
             {preferencias?.itemsSeleccionados?.length ? (
-              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                <p className="text-sm text-green-800 flex items-center gap-2">
-                  ✅ Tienes {preferencias.itemsSeleccionados.length} alimentos seleccionados
-                </p>
-                <p className="text-xs text-green-600 mt-1">
-                  HealthyIA usara estos alimentos para crear tu plan personalizado
-                </p>
-              </div>
+              <>
+                <div className="bg-green-50 p-3 rounded-lg border border-green-200 mb-3">
+                  <p className="text-sm text-green-800 flex items-center gap-2">
+                    ✅ Tienes {preferencias.itemsSeleccionados.length} alimentos seleccionados
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    HealthyIA usara estos alimentos para crear tu plan personalizado
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => setMostrarResumenAlimentos(!mostrarResumenAlimentos)}
+                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                >
+                  {mostrarResumenAlimentos ? '▼ Ocultar' : '▶ Ver'} detalle de tus alimentos
+                </button>
+                
+                {mostrarResumenAlimentos && alimentosPorTipo && (
+                  <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 className="font-semibold text-gray-700 mb-2">Distribucion de tus alimentos:</h4>
+                    <div className="space-y-2 text-sm">
+                      {alimentosPorTipo.proteinas.length > 0 && (
+                        <div><span className="font-medium text-red-600">🥩 Proteinas:</span> {alimentosPorTipo.proteinas.join(', ')}</div>
+                      )}
+                      {alimentosPorTipo.carbohidratos.length > 0 && (
+                        <div><span className="font-medium text-orange-600">🍚 Carbohidratos:</span> {alimentosPorTipo.carbohidratos.join(', ')}</div>
+                      )}
+                      {alimentosPorTipo.vegetales.length > 0 && (
+                        <div><span className="font-medium text-green-600">🥬 Vegetales:</span> {alimentosPorTipo.vegetales.join(', ')}</div>
+                      )}
+                      {alimentosPorTipo.frutas.length > 0 && (
+                        <div><span className="font-medium text-purple-600">🍎 Frutas:</span> {alimentosPorTipo.frutas.join(', ')}</div>
+                      )}
+                      {alimentosPorTipo.lacteos.length > 0 && (
+                        <div><span className="font-medium text-blue-600">🥛 Lacteos:</span> {alimentosPorTipo.lacteos.join(', ')}</div>
+                      )}
+                      {alimentosPorTipo.grasas.length > 0 && (
+                        <div><span className="font-medium text-yellow-600">🥑 Grasas saludables:</span> {alimentosPorTipo.grasas.join(', ')}</div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Tu plan se creara combinando estos alimentos de manera balanceada
+                    </p>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
                 <p className="text-sm text-yellow-800 flex items-center gap-2">
@@ -380,7 +554,7 @@ export default function Dashboard() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Generando plan con IA...
+                Generando plan con IA usando tus alimentos...
               </span>
             ) : (
               '✨ Generar plan de alimentacion con IA ✨'
@@ -388,7 +562,7 @@ export default function Dashboard() {
           </button>
 
           <div className="mt-6 text-center text-xs text-gray-400">
-            💡 La IA generara un plan basado en tus objetivos, preferencias y datos fisicos
+            💡 La IA generara un plan usando SOLO los alimentos que seleccionaste en tus preferencias
           </div>
         </div>
       </div>
