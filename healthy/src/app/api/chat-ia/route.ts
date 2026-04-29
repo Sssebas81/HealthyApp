@@ -1,298 +1,108 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Base de datos de alimentos
+const alimentosInfo: Record<string, any> = {
+  'pollo': { nombre: 'Pollo', porcion: '150g (tamaño de tu palma)', calorias: 248, proteina: '31g', reemplazo: 'Pescado (150g), Huevos (4 unidades), Tofu (150g), Lentejas (1.5 tazas)' },
+  'pescado': { nombre: 'Pescado blanco', porcion: '150g (tamaño de tu palma)', calorias: 180, proteina: '25g', reemplazo: 'Pollo (150g), Huevos (4 unidades), Tofu (150g)' },
+  'huevos': { nombre: 'Huevos', porcion: '3-4 unidades', calorias: 240, proteina: '18g', reemplazo: 'Tofu revuelto (150g), Claras líquidas (200ml), Lentejas (1.5 tazas)' },
+  'arroz_integral': { nombre: 'Arroz integral', porcion: '1 puño (100g cocido)', calorias: 111, reemplazo: 'Quinoa (100g), Papa (1 unidad), Coliflor picada (100g)' },
+  'quinoa': { nombre: 'Quinoa', porcion: '1 puño (100g cocida)', calorias: 120, reemplazo: 'Arroz integral (100g), Papa (1 unidad)' },
+  'papa': { nombre: 'Papa o batata', porcion: '1 unidad mediana', calorias: 160, reemplazo: 'Arroz integral (100g), Quinoa (100g)' },
+  'manzana': { nombre: 'Manzana', porcion: '1 unidad', calorias: 95, fibra: '4.4g', reemplazo: 'Plátano, Pera, Naranja (1 unidad cada una)' },
+  'platano': { nombre: 'Plátano', porcion: '1 unidad', calorias: 105, reemplazo: 'Manzana, Pera, Naranja (1 unidad cada una)' },
+  'yogur_griego': { nombre: 'Yogur griego', porcion: '200g', calorias: 150, proteina: '20g', reemplazo: 'Yogur natural, Queso fresco (100g), Leche (200ml)' },
+  'aguacate': { nombre: 'Aguacate', porcion: '1/2 unidad', calorias: 120, grasas: '11g', reemplazo: 'Aceite de oliva (1 cda), Nueces (30g), Almendras (30g)' },
+  'nueces': { nombre: 'Nueces', porcion: '30g (10-12 nueces)', calorias: 196, grasas: '19g', reemplazo: 'Almendras (30g), Avellanas (30g)' },
+  'almendras': { nombre: 'Almendras', porcion: '30g (20-22 almendras)', calorias: 173, reemplazo: 'Nueces (30g), Avellanas (30g)' }
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { mensaje, contexto } = body;
+    const mensajeLower = mensaje.toLowerCase().trim();
 
-    console.log('Mensaje recibido:', mensaje);
-
-    if (!mensaje) {
-      return NextResponse.json(
-        { success: false, error: 'Mensaje requerido' },
-        { status: 400 }
-      );
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const mensajeLower = mensaje.toLowerCase();
     let respuesta = "";
 
-    // Sistema de respuestas mejorado y más amplio
-    
-    // 1. Preguntas sobre reemplazos de alimentos
-    if (mensajeLower.includes("reemplazar") || mensajeLower.includes("sustituir") || mensajeLower.includes("cambiar")) {
-      if (mensajeLower.includes("pollo") || mensajeLower.includes("carne")) {
-        respuesta = `🔄 **Reemplazos para carnes y proteinas:**
-
-🐔 **Pollo** → Puedes cambiarlo por:
-• Pavo (similar textura y proteina)
-• Tofu o tempeh (opcion vegetariana)
-• Pescado blanco (merluza, lenguado)
-• Setas o portobellos (textura similar)
-• Seitan (alto en proteina)
-
-🥩 **Carne roja** → Alternativas:
-• Carne magra de cerdo
-• Tofu marinado
-• Lentejas o garbanzos (para guisos)
-• Quinoa (proteina completa)
-
-💡 **Consejo:** Ajusta las porciones para mantener las calorias. Generalmente 150g de proteina es una buena porcion.
-
-¿Te gustaria saber sobre otro alimento especifico?`;
-      } 
-      else if (mensajeLower.includes("arroz")) {
-        respuesta = `🍚 **Alternativas al arroz:**
-
-• Quinoa (mas proteina, similar textura)
-• Coliflor picada (bajas calorias)
-• Cuscus integral
-• Trigo burgol
-• Mijo
-• Amaranto
-
-📊 **Comparativa nutricional (por 100g cocido):**
-• Arroz integral: 111 kcal | 2.6g proteina
-• Quinoa: 120 kcal | 4.1g proteina  
-• Coliflor: 25 kcal | 2g proteina
-
-¿Quieres sugerencias para otros carbohidratos?`;
+    // ============ REEMPLAZOS ============
+    if (mensajeLower.includes("reemplazar")) {
+      let alimentoId = mensajeLower.replace("reemplazar", "").trim();
+      
+      // Buscar el alimento en la base de datos
+      let alimento = null;
+      for (const [key, value] of Object.entries(alimentosInfo)) {
+        if (alimentoId.includes(key) || key.includes(alimentoId)) {
+          alimento = { id: key, ...value };
+          break;
+        }
       }
-      else if (mensajeLower.includes("huevo") || mensajeLower.includes("huevos")) {
-        respuesta = `🥚 **Reemplazos para huevos:**
-
-En preparaciones:
-• 1 cucharada de semillas de chia + 3 cucharadas de agua
-• 1/4 taza de puré de manzana
-• 1/4 taza de puré de platano
-• Tofu revuelto (para huevos revueltos)
-• Aquafaba (agua de garbanzos)
-
-En desayunos:
-• Tofu revuelto con cúrcuma
-• Yogur griego con semillas
-• Batido de proteina vegetal
-
-¿Te interesa alguna opcion en particular?`;
+      
+      if (alimento) {
+        respuesta = `🔄 **Cómo reemplazar ${alimento.nombre}:**\n\nPuedes cambiarlo por:\n• ${alimento.reemplazo}\n\n💡 Mantén la misma cantidad para igualar calorías.`;
+      } else {
+        respuesta = `🔄 **Reemplazos generales:**\n\n• Proteínas → intercambia entre pollo, pescado, huevos, tofu\n• Carbohidratos → intercambia entre arroz, quinoa, papa\n• Frutas → todas son intercambiables (1 pieza = 1 pieza)\n• Grasas → intercambia entre aguacate, aceite, frutos secos`;
       }
-      else if (mensajeLower.includes("leche") || mensajeLower.includes("lacteo")) {
-        respuesta = `🥛 **Alternativas a los lacteos:**
+    }
 
-Leches vegetales:
-• Leche de almendras (25-30 kcal/100ml)
-• Leche de soya (40-50 kcal/100ml) - mas proteina
-• Leche de avena (45-55 kcal/100ml)
-• Leche de coco (20-30 kcal/100ml) - mas ligera
+    // ============ PORCIONES ============
+    else if (mensajeLower.includes("porción") || mensajeLower.includes("porcion")) {
+      let alimentoId = mensajeLower.replace("porción de", "").replace("porcion de", "").trim();
+      
+      let alimento = null;
+      for (const [key, value] of Object.entries(alimentosInfo)) {
+        if (alimentoId.includes(key) || key.includes(alimentoId)) {
+          alimento = { id: key, ...value };
+          break;
+        }
+      }
+      
+      if (alimento) {
+        respuesta = `📏 **Porción de ${alimento.nombre}:**\n\n• Cantidad: ${alimento.porcion}\n• Calorías: ${alimento.calorias} kcal\n${alimento.proteina ? `• Proteína: ${alimento.proteina}\n` : ''}${alimento.fibra ? `• Fibra: ${alimento.fibra}\n` : ''}${alimento.grasas ? `• Grasas: ${alimento.grasas}\n` : ''}`;
+      } else {
+        respuesta = `📏 **Guía general de porciones:**\n\n• Proteína: 1-2 palmas (150-200g)\n• Carbohidratos: 1 puño (100-150g)\n• Vegetales: todo lo que quieras\n• Grasas: 1 pulgar (10-15g)\n• Frutas: 1 puño (1 unidad)`;
+      }
+    }
 
-Yogures:
-• Yogur de coco
-• Yogur de soya
-• Yogur de almendras
-
-Quesos:
-• Queso vegano de anacardos
-• Levadura nutricional (sabor a queso)
-• Tofu firme desmenuzado
-
-¿Cual te gustaria probar?`;
+    // ============ SNACKS ============
+    else if (mensajeLower.includes("snack")) {
+      if (mensajeLower.includes("noche")) {
+        respuesta = `🌙 **Snacks para la NOCHE (<150 kcal):**\n\n• 1 yogur griego (150 kcal)\n• 1 manzana + canela (95 kcal)\n• 2 claras de huevo (70 kcal)\n• 1 puñado de frutos rojos (50 kcal)`;
+      }
+      else if (mensajeLower.includes("pre-entreno") || mensajeLower.includes("preentreno")) {
+        respuesta = `⚡ **Snacks PRE-ENTRENO (30-60 min antes):**\n\n• 1 plátano + 1 cda mantequilla de maní (220 kcal)\n• 1 tostada integral + mermelada (150 kcal)\n• 1 yogur + granola (200 kcal)`;
+      }
+      else if (mensajeLower.includes("proteico")) {
+        respuesta = `💪 **Snacks PROTEICOS:**\n\n• Batido de proteína (120 kcal)\n• 2 huevos duros (140 kcal)\n• Yogur griego (150 kcal)\n• Queso fresco (100 kcal)`;
       }
       else {
-        respuesta = `🔄 **Guia general de reemplazos:**
-
-🍗 **Proteinas** ↔️ Otra proteina (pollo ↔️ pescado ↔️ tofu)
-🍚 **Carbohidratos** ↔️ Otro carbohidrato (arroz ↔️ quinoa ↔️ papa)
-🥬 **Vegetales** ↔️ Cualquier vegetal verde
-🥑 **Grasas saludables** ↔️ Otra grasa (aguacate ↔️ aceite de oliva ↔️ frutos secos)
-
-✨ **Tips:**
-• Manten el mismo grupo de alimento
-• Ajusta la cantidad para igualar calorias
-• Si eliminas un grupo, compensa con otro
-
-¿Que alimento especifico quieres reemplazar?`;
+        respuesta = `🍎 **Tipos de snacks:**\n\n• 🌙 Noche → Yogur, manzana, claras de huevo\n• ⚡ Pre-entreno → Plátano, tostada, dátiles\n• 💪 Proteicos → Batido, huevos duros, queso\n\n¿Para qué momento necesitas el snack?`;
       }
     }
-    
-    // 2. Preguntas sobre porciones
-    else if (mensajeLower.includes("porcion") || mensajeLower.includes("cuanto") || mensajeLower.includes("cantidad")) {
-      respuesta = `📏 **Guia de porciones visual:**
 
-Usa tu mano como guia:
-
-✋ **Proteinas** (pollo, pescado, carne):
-• Tamaño de tu palma = ~150g
-• Grosor del dedo meñique
-
-👊 **Carbohidratos** (arroz, pasta, papa):
-• Tamaño de tu puño cerrado = ~150g cocidos
-
-👍 **Grasas** (aguacate, frutos secos):
-• Tamaño de tu pulgar = ~30g o 1 cucharada
-
-🥬 **Vegetales**:
-• Todo lo que quieras! (bajas calorias)
-
-🍎 **Frutas**:
-• Tamaño de tu puño = 1 porcion
-
-📊 **Para tu objetivo de ${contexto.objetivo === 'perder_peso' ? 'perder peso' : contexto.objetivo === 'masa_muscular' ? 'ganar masa muscular' : 'recomposicion'}:**
-• Proteina: 1-2 palmas por comida
-• Carbohidratos: ${contexto.objetivo === 'perder_peso' ? '1/2 a 1 puño' : '1-2 puños'}
-• Grasas: 1-2 pulgares
-
-¿Quieres ejemplos mas especificos?`;
+    // ============ TIPS ============
+    else if (mensajeLower.includes("fuera de casa") || mensajeLower.includes("restaurante")) {
+      respuesta = `🍽️ **Tips para comer FUERA DE CASA:**\n\n✅ Pide a la plancha, horno o vapor\n✅ Salsas y aderezos APARTE\n✅ Verduras como guarnición\n✅ Agua o infusiones\n✅ Pide la mitad para llevar\n\n❌ Evita fritos, rebozados y salsas cremosas`;
     }
-    
-    // 3. Preguntas sobre snacks
-    else if (mensajeLower.includes("snack") || mensajeLower.includes("entre comidas") || mensajeLower.includes("merienda")) {
-      respuesta = `🍎 **Snacks saludables (100-200 kcal):**
-
-⚡ **Pre-entreno:**
-• 1 platano + 1 cucharada mantequilla de mani (180 kcal)
-• 2 higos + 10 almendras (150 kcal)
-• Tostada integral + aguacate (160 kcal)
-
-🌙 **Post-entreno / Noche:**
-• Yogur griego + frutos rojos (150 kcal)
-• 2 huevos duros + zanahoria (140 kcal)
-• Batido de proteina con agua (120 kcal)
-
-💼 **Para la oficina/estudio:**
-• 1 manzana + 1 cucharada crema de mani (150 kcal)
-• Palitos de apio + hummus (100 kcal)
-• 30g frutos secos + 1 fruta deshidratada (180 kcal)
-
-🕒 **Horarios ideales:**
-• Media mañana (10-11 am)
-• Media tarde (4-5 pm)
-
-¿Te gustaria mas opciones para alguna ocasion especifica?`;
+    else if (mensajeLower.includes("antojos")) {
+      respuesta = `🍬 **Cómo controlar los ANTOJOS:**\n\n1️⃣ Bebe 1 vaso de agua y espera 10 min\n2️⃣ Come algo saludable (fruta, yogur)\n3️⃣ Distráete (camina, llama a alguien)\n4️⃣ Si te das el gusto, controla la porción`;
     }
-    
-    // 4. Comidas fuera de casa
-    else if (mensajeLower.includes("fuera de casa") || mensajeLower.includes("restaurante") || mensajeLower.includes("comer fuera")) {
-      respuesta = `🍽️ **Guia para comer fuera de casa:**
-
-🏪 **Comida rapida:**
-• Elige opciones a la plancha o parrilla
-• Evita fritos, empanizados y salsas cremosas
-• Cambia las papas por ensalada
-• Compartir las porciones grandes
-
-🍜 **Restaurante casual:**
-• Pide aderezos y salsas aparte
-• Prefiere platos al horno, vapor o plancha
-• Si hay pan, limita a 1-2 piezas
-• Agua o infusion en lugar de refrescos
-
-🍕 **Pizza / Hamburguesas:**
-• Elige masa integral o delgada
-• Doble proteina en lugar de queso extra
-• Acompaña con ensalada
-• Controla las porciones (come la mitad)
-
-✨ **Tips generales:**
-• No llegues con mucha hambre
-• Toma agua antes y durante la comida
-• Mastica despacio y disfruta
-• No te sientas culpable - un desliz no arruina tu progreso!
-
-¿Tienes un tipo de restaurante en mente?`;
+    else if (mensajeLower.includes("hidratar") || mensajeLower.includes("agua")) {
+      respuesta = `💧 **Hidratación recomendada:**\n\n• 2-3 litros al día (8-12 vasos)\n• 2 vasos al despertar\n• 1 vaso antes de cada comida\n• Durante ejercicio: +500ml por hora`;
     }
-    
-    // 5. Motivación y dudas comunes
-    else if (mensajeLower.includes("motiv") || mensajeLower.includes("animo") || mensajeLower.includes("trampa")) {
-      respuesta = `💪 **Manteniendo la motivacion:**
-
-🎯 **Es normal tener altibajos!**
-
-✅ **Recordatorios positivos:**
-• Un dia no define tu progreso
-• Cada comida es una nueva oportunidad
-• Pequeños cambios = grandes resultados
-
-📝 **Estrategias practicas:**
-• Planifica tus comidas con anticipacion
-• Prepara snacks saludables disponibles
-• Registra tus logros (no solo el peso)
-• Busca un compañero de viaje
-
-🚀 **Si tuviste un exceso:**
-• No te castigues ni "compenses" saltando comidas
-• Vuelve a tu plan en la siguiente comida
-• Bebe mas agua
-• Retoma tu actividad fisica
-
-💬 **Recuerda:** La consistencia es mas importante que la perfeccion. ¿Que te preocupa en particular?`;
+    else if (mensajeLower.includes("comer de más")) {
+      respuesta = `💪 **Si comiste de más:**\n\n• No te castigues ni te saltes comidas\n• Bebe más agua\n• Vuelve a tu plan en la siguiente comida\n• Un día no define tu progreso`;
     }
-    
-    // 6. Hidratación
-    else if (mensajeLower.includes("agua") || mensajeLower.includes("hidrat") || mensajeLower.includes("beber")) {
-      respuesta = `💧 **Hidratacion optima:**
-
-📊 **Cantidad recomendada:**
-• 2-3 litros al dia (8-12 vasos)
-• +500ml por hora de ejercicio
-
-⏰ **Mejores momentos:**
-• 1 vaso al despertar
-• 30 min antes de cada comida
-• Antes, durante y despues del ejercicio
-• Antes de dormir (1 vaso)
-
-🥤 **Otras fuentes de hidratacion:**
-• Infusiones y tés sin azucar
-• Agua con limon, pepino o menta
-• Caldos vegetales
-• Frutas con alto contenido de agua (sandia, melon)
-
-⚠️ **Señales de deshidratacion:**
-• Sed intensa
-• Orina oscura
-• Dolor de cabeza
-• Fatiga
-
-💡 **Tips:** Lleva siempre una botella reusable. ¿Necesitas ayuda para crear un plan de hidratacion?`;
-    }
-    
-    // 7. Pregunta por defecto (respuesta general)
     else {
-      respuesta = `🌟 **¡Excelente pregunta!** 🌟
-
-Basado en tu plan de ${contexto.calorias} kcal/dia para ${contexto.objetivo === 'perder_peso' ? 'perder peso' : contexto.objetivo === 'masa_muscular' ? 'ganar masa muscular' : 'recomposicion corporal'}:
-
-📌 **Lo mas importante:**
-• Consistencia > Perfeccion
-• Escucha a tu cuerpo
-• Ajusta segun tu energia y actividad
-
-💡 **¿Sabias que?**
-• Comer proteina en cada comida ayuda a mantener musculo
-• Los vegetales de hoja verde son tus aliados (bajas calorias, altos nutrientes)
-• Dormir bien es clave para la recuperacion y control de peso
-
-🎯 **Puedo ayudarte con:**
-• Modificaciones a tu plan actual
-• Ideas de comidas rapidas
-• Como manejar antojos
-• Estrategias para comer fuera
-• Calculo de macronutrientes
-
-¿Sobre que tema te gustaria profundizar?`;
+      respuesta = `🌟 **HealthyIA - Tu asistente nutricional** 🌟\n\nElige una opción:\n\n🔄 **Reemplazos** → ¿Qué alimento quieres cambiar?\n📏 **Porciones** → ¿De qué alimento quieres la medida?\n🍎 **Snacks** → ¿Para qué momento?\n💡 **Tips** → ¿Qué consejo necesitas?`;
     }
 
     return NextResponse.json({ success: true, respuesta });
 
   } catch (error) {
-    console.error('Error en chat-ia:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Error interno del servidor' 
-      },
-      { status: 500 }
-    );
+    console.error('Error:', error);
+    return NextResponse.json({ 
+      success: true, 
+      respuesta: "Lo siento, hubo un error. Por favor, intenta de nuevo. 🙏" 
+    });
   }
 }

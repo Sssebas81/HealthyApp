@@ -8,52 +8,33 @@ interface ChatIAProps {
   onBack: () => void;
 }
 
-// Preguntas sugeridas por categoría
-const preguntasSugeridas = {
-  comidas: [
-    "¿Puedo cambiar el desayuno por algo más ligero?",
-    "¿Qué puedo comer si no tengo tiempo para cocinar?",
-    "¿Cómo puedo hacer más variado mi almuerzo?",
-    "¿Qué cena ligera puedo hacer antes de dormir?"
-  ],
-  reemplazos: [
-    "¿Cómo reemplazo el pollo si soy vegetariano?",
-    "¿Qué puedo usar en lugar de arroz?",
-    "Alternativas sin gluten para mi plan",
-    "¿Cómo sustituyo los lácteos?"
-  ],
-  porciones: [
-    "¿Cómo calculo las porciones correctas?",
-    "¿Cuánta proteína debo comer por comida?",
-    "¿Puedo comer más vegetales sin límite?",
-    "¿Cómo ajusto las porciones si hago ejercicio?"
-  ],
-  snacks: [
-    "Snacks saludables para la noche",
-    "¿Qué puedo comer entre comidas?",
-    "Snacks pre-entrenamiento",
-    "¿Frutos secos, cuántos puedo comer?"
-  ],
-  tips: [
-    "¿Cómo mantener la dieta fuera de casa?",
-    "Consejos para evitar antojos",
-    "¿Cómo hidratarme correctamente?",
-    "¿Qué hacer si como de más un día?"
-  ]
+// Mapeo de nombres de alimentos
+const nombresAlimentos: Record<string, string> = {
+  'pollo': 'Pollo', 'pescado': 'Pescado', 'huevos': 'Huevos', 'carne_magra': 'Carne magra',
+  'tofu': 'Tofu', 'lentejas': 'Lentejas', 'arroz_integral': 'Arroz integral', 'quinoa': 'Quinoa',
+  'avena': 'Avena', 'papa': 'Papa o batata', 'pan_integral': 'Pan integral', 'brocoli': 'Brócoli',
+  'espinacas': 'Espinacas', 'zanahoria': 'Zanahoria', 'tomate': 'Tomate', 'pepino': 'Pepino',
+  'pimiento': 'Pimiento', 'manzana': 'Manzana', 'platano': 'Plátano', 'naranja': 'Naranja',
+  'fresas': 'Fresas', 'kiwi': 'Kiwi', 'arandanos': 'Arándanos', 'aguacate': 'Aguacate',
+  'aceite_oliva': 'Aceite de oliva', 'nueces': 'Nueces', 'almendras': 'Almendras',
+  'semillas_chia': 'Semillas de chía', 'yogur_griego': 'Yogur griego', 'leche': 'Leche',
+  'queso': 'Queso fresco', 'requeson': 'Requesón'
 };
 
 export default function ChatIA({ plan, user, onBack }: ChatIAProps) {
   const [mensajes, setMensajes] = useState<Mensaje[]>([
     {
       tipo: 'ia',
-      contenido: `¡Hola ${user?.name || 'usuario'}! 👋 Soy HealthyIA, tu asistente nutricional personalizado.\n\nBasado en tu plan actual de ${plan.caloriasDiarias} kcal/día con objetivo de ${plan.objetivo === 'perder_peso' ? 'perder peso' : plan.objetivo === 'masa_muscular' ? 'ganar masa muscular' : 'recomposición corporal'}, puedo ayudarte con:\n\n🍽️ **Modificaciones a tu plan**\n🔄 **Reemplazos de alimentos**\n📏 **Porciones y cantidades**\n🍎 **Snacks saludables**\n💡 **Tips y consejos prácticos**\n\n¿En qué puedo ayudarte hoy?`,
+      contenido: `¡Hola ${user?.name || 'usuario'}! 👋 Soy HealthyIA, tu asistente nutricional personalizado.\n\nBasado en tu plan de **${plan.caloriasDiarias} kcal/día** para **${plan.objetivo === 'perder_peso' ? 'perder peso' : plan.objetivo === 'masa_muscular' ? 'ganar masa muscular' : 'recomposición corporal'}**, elige una opción:`,
       timestamp: new Date()
     }
   ]);
-  const [input, setInput] = useState('');
   const [cargando, setCargando] = useState(false);
-  const [categoriaActiva, setCategoriaActiva] = useState<string>('comidas');
+  const [categoriaActiva, setCategoriaActiva] = useState<string>('reemplazos');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const alimentosUsuario = plan.preferenciasUsadas || [];
+  const alimentosNombres = alimentosUsuario.map(id => nombresAlimentos[id] || id);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -63,20 +44,15 @@ export default function ChatIA({ plan, user, onBack }: ChatIAProps) {
     scrollToBottom();
   }, [mensajes]);
 
-  const enviarMensaje = async () => {
-    if (!input.trim() || cargando) return;
-
-    const mensajeUsuario = input.trim();
-    setInput('');
+  const enviarConsulta = async (consulta: string) => {
+    setCargando(true);
     
     setMensajes(prev => [...prev, {
       tipo: 'usuario',
-      contenido: mensajeUsuario,
+      contenido: consulta,
       timestamp: new Date()
     }]);
     
-    setCargando(true);
-
     try {
       const response = await fetch('/api/chat-ia', {
         method: 'POST',
@@ -84,40 +60,28 @@ export default function ChatIA({ plan, user, onBack }: ChatIAProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          mensaje: mensajeUsuario,
+          mensaje: consulta,
           contexto: {
             objetivo: plan.objetivo,
             calorias: plan.caloriasDiarias,
-            alimentosPlan: `${plan.desayuno} ${plan.almuerzo} ${plan.cena}`,
-            preferencias: plan.preferenciasUsadas,
-            historial: mensajes.slice(-10).map(m => ({
-              rol: m.tipo === 'ia' ? 'asistente' : 'usuario',
-              contenido: m.contenido
-            }))
+            preferencias: plan.preferenciasUsadas
           }
         }),
       });
 
       const data = await response.json();
       
-      if (data.success) {
-        setMensajes(prev => [...prev, {
-          tipo: 'ia',
-          contenido: data.respuesta,
-          timestamp: new Date()
-        }]);
-      } else {
-        setMensajes(prev => [...prev, {
-          tipo: 'ia',
-          contenido: 'Lo siento, tuve un problema técnico. Por favor, intenta de nuevo.',
-          timestamp: new Date()
-        }]);
-      }
+      setMensajes(prev => [...prev, {
+        tipo: 'ia',
+        contenido: data.respuesta,
+        timestamp: new Date()
+      }]);
+      
     } catch (error) {
       console.error('Error:', error);
       setMensajes(prev => [...prev, {
         tipo: 'ia',
-        contenido: 'Lo siento, no puedo conectar con el servidor. Por favor, intenta más tarde.',
+        contenido: 'Lo siento, hubo un error. Por favor, intenta de nuevo.',
         timestamp: new Date()
       }]);
     } finally {
@@ -125,22 +89,11 @@ export default function ChatIA({ plan, user, onBack }: ChatIAProps) {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      enviarMensaje();
-    }
-  };
-
-  const sugerirPregunta = (pregunta: string) => {
-    setInput(pregunta);
-  };
-
   const limpiarConversacion = () => {
     setMensajes([
       {
         tipo: 'ia',
-        contenido: `Conversación reiniciada. ¿En qué más puedo ayudarte con tu plan nutricional?`,
+        contenido: `Conversación reiniciada. ¿En qué te puedo ayudar con tu plan nutricional?\n\nElige una opción:`,
         timestamp: new Date()
       }
     ]);
@@ -150,7 +103,7 @@ export default function ChatIA({ plan, user, onBack }: ChatIAProps) {
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Header */}
       <div className="bg-white shadow-md p-4 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
+        <div className="max-w-4xl mx-auto flex justify-between items-center">
           <button
             onClick={onBack}
             className="text-green-600 hover:text-green-700 font-semibold flex items-center gap-2"
@@ -159,7 +112,7 @@ export default function ChatIA({ plan, user, onBack }: ChatIAProps) {
           </button>
           <div className="text-center">
             <h1 className="font-bold text-gray-800">HealthyIA</h1>
-            <p className="text-xs text-gray-500">Asistente Nutricional 24/7</p>
+            <p className="text-xs text-gray-500">Asistente Nutricional</p>
           </div>
           <button
             onClick={limpiarConversacion}
@@ -171,40 +124,31 @@ export default function ChatIA({ plan, user, onBack }: ChatIAProps) {
         </div>
       </div>
 
-      {/* Información del plan actual */}
+      {/* Información del plan */}
       <div className="bg-green-50 border-b border-green-200 p-3">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-wrap justify-between items-center gap-2 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-green-700">📊 Plan activo:</span>
-              <span className="text-gray-600">{plan.caloriasDiarias} kcal/día</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-green-700">🎯 Objetivo:</span>
-              <span className="text-gray-600 capitalize">
-                {plan.objetivo === 'perder_peso' ? 'Perder peso' : 
-                 plan.objetivo === 'masa_muscular' ? 'Ganar masa muscular' : 
-                 'Recomposición corporal'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-green-700">🍽️ Alimentos disponibles:</span>
-              <span className="text-gray-600">{plan.preferenciasUsadas?.length || 0} items</span>
-            </div>
+        <div className="max-w-4xl mx-auto flex flex-wrap justify-between items-center gap-2 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-green-700">📊 {plan.caloriasDiarias} kcal/día</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-green-700">🎯 {plan.objetivo === 'perder_peso' ? 'Perder peso' : plan.objetivo === 'masa_muscular' ? 'Ganar masa' : 'Recomposición'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-green-700">🍽️ {alimentosUsuario.length} alimentos</span>
           </div>
         </div>
       </div>
 
       {/* Chat messages */}
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="max-w-6xl mx-auto space-y-4">
+        <div className="max-w-4xl mx-auto space-y-4">
           {mensajes.map((msg, idx) => (
             <div
               key={idx}
               className={`flex ${msg.tipo === 'usuario' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[85%] rounded-2xl p-4 ${
+                className={`max-w-[80%] rounded-2xl p-4 ${
                   msg.tipo === 'usuario'
                     ? 'bg-green-500 text-white'
                     : 'bg-white shadow-md text-gray-800'
@@ -232,102 +176,147 @@ export default function ChatIA({ plan, user, onBack }: ChatIAProps) {
         </div>
       </div>
 
-      {/* Categorías de preguntas sugeridas */}
+      {/* Botones de categorías */}
       <div className="bg-white border-t border-gray-200 p-3">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-wrap gap-2 mb-3">
-            <button
-              onClick={() => setCategoriaActiva('comidas')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
-                categoriaActiva === 'comidas'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              🍽️ Comidas
-            </button>
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-wrap gap-2 mb-4">
             <button
               onClick={() => setCategoriaActiva('reemplazos')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                 categoriaActiva === 'reemplazos'
                   ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              🔄 Reemplazos
+              🔄 REEMPLAZOS
             </button>
             <button
               onClick={() => setCategoriaActiva('porciones')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                 categoriaActiva === 'porciones'
                   ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              📏 Porciones
+              📏 PORCIONES
             </button>
             <button
               onClick={() => setCategoriaActiva('snacks')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                 categoriaActiva === 'snacks'
                   ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              🍎 Snacks
+              🍎 SNACKS
             </button>
             <button
               onClick={() => setCategoriaActiva('tips')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                 categoriaActiva === 'tips'
                   ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              💡 Tips
+              💡 TIPS
             </button>
           </div>
-          
-          <div className="flex overflow-x-auto gap-2 pb-2">
-            {preguntasSugeridas[categoriaActiva as keyof typeof preguntasSugeridas].map((pregunta, idx) => (
-              <button
-                key={idx}
-                onClick={() => sugerirPregunta(pregunta)}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 whitespace-nowrap transition flex-shrink-0"
-              >
-                {pregunta}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
 
-      {/* Input area */}
-      <div className="bg-white border-t border-gray-200 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex gap-2">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Escribe tu pregunta aquí... (Ej: ¿Puedo cambiar el pollo por pescado? ¿Cuánta proteína necesito?)"
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-              rows={2}
-              style={{ minHeight: '60px', maxHeight: '120px' }}
-              disabled={cargando}
-            />
-            <button
-              onClick={enviarMensaje}
-              disabled={cargando || !input.trim()}
-              className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Enviar
-            </button>
-          </div>
-          <div className="mt-2 text-xs text-gray-400 flex justify-between">
-            <span>💡 HealthyIA puede ayudarte con nutrición, planes alimenticios y hábitos saludables</span>
-            <span className="font-mono">Enter para enviar</span>
-          </div>
+          {/* Botones de REEMPLAZOS - Muestra los alimentos del usuario */}
+          {categoriaActiva === 'reemplazos' && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500">¿Qué alimento quieres reemplazar?</p>
+              <div className="flex flex-wrap gap-2">
+                {alimentosUsuario.map((alimento, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => enviarConsulta(`reemplazar ${alimento}`)}
+                    className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-medium transition"
+                  >
+                    🔄 Reemplazar {nombresAlimentos[alimento] || alimento}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Botones de PORCIONES - Muestra los alimentos del usuario */}
+          {categoriaActiva === 'porciones' && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500">¿De qué alimento quieres saber la porción?</p>
+              <div className="flex flex-wrap gap-2">
+                {alimentosUsuario.map((alimento, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => enviarConsulta(`porción de ${alimento}`)}
+                    className="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-sm font-medium transition"
+                  >
+                    📏 Porción de {nombresAlimentos[alimento] || alimento}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Botones de SNACKS */}
+          {categoriaActiva === 'snacks' && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500">¿Qué tipo de snack necesitas?</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => enviarConsulta("snacks para la noche")}
+                  className="px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg text-sm font-medium transition"
+                >
+                  🌙 Snacks para la noche
+                </button>
+                <button
+                  onClick={() => enviarConsulta("snacks pre-entreno")}
+                  className="px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg text-sm font-medium transition"
+                >
+                  ⚡ Snacks pre-entreno
+                </button>
+                <button
+                  onClick={() => enviarConsulta("snacks proteicos")}
+                  className="px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg text-sm font-medium transition"
+                >
+                  💪 Snacks proteicos
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Botones de TIPS */}
+          {categoriaActiva === 'tips' && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500">¿Qué consejo necesitas?</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => enviarConsulta("comer fuera de casa")}
+                  className="px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-sm font-medium transition"
+                >
+                  🍽️ Comer fuera de casa
+                </button>
+                <button
+                  onClick={() => enviarConsulta("controlar antojos")}
+                  className="px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-sm font-medium transition"
+                >
+                  🍬 Controlar antojos
+                </button>
+                <button
+                  onClick={() => enviarConsulta("cómo hidratarme")}
+                  className="px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-sm font-medium transition"
+                >
+                  💧 Hidratación
+                </button>
+                <button
+                  onClick={() => enviarConsulta("comer de más un día")}
+                  className="px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-sm font-medium transition"
+                >
+                  💪 Si comí de más
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
