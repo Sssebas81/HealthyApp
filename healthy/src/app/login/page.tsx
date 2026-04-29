@@ -8,28 +8,47 @@ export default function Login() {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
   const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
     
-    const users: User[] = JSON.parse(localStorage.getItem('users') || '[]');
-    const user = users.find((u: User) => u.email === email && u.password === password);
-    
-    if (user) {
-      // Guardar token y usuario
-      localStorage.setItem('token', 'fake-jwt-token');
-      localStorage.setItem('user', JSON.stringify(user));
+    try {
+      // Obtener usuarios del localStorage
+      const users: User[] = JSON.parse(localStorage.getItem('users') || '[]');
+      console.log('Usuarios registrados:', users);
       
-      // También guardar en sessionStorage para respaldo
-      sessionStorage.setItem('user', JSON.stringify(user));
+      // Buscar usuario por email y password
+      const user = users.find((u: User) => u.email === email && u.password === password);
+      console.log('Usuario encontrado:', user);
       
-      console.log('Usuario guardado en localStorage:', user);
-      
-      // Redirigir al dashboard
-      router.push('/dashboard');
-    } else {
-      setError('Credenciales incorrectas');
+      if (user) {
+        // Guardar token y usuario
+        localStorage.setItem('token', 'fake-jwt-token-' + Date.now());
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        // También guardar en sessionStorage para respaldo
+        sessionStorage.setItem('token', 'fake-jwt-token-' + Date.now());
+        sessionStorage.setItem('user', JSON.stringify(user));
+        
+        console.log('Usuario guardado en localStorage:', user);
+        console.log('Token guardado:', localStorage.getItem('token'));
+        
+        // Pequeño delay para asegurar que se guardó
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 100);
+      } else {
+        setError('Credenciales incorrectas. Verifica tu email y contraseña.');
+      }
+    } catch (err) {
+      console.error('Error en login:', err);
+      setError('Error al iniciar sesión. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -55,6 +74,7 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               required
+              disabled={loading}
             />
           </div>
           
@@ -68,14 +88,16 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               required
+              disabled={loading}
             />
           </div>
           
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 transition"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 transition disabled:opacity-50"
           >
-            Ingresar
+            {loading ? 'Iniciando sesión...' : 'Ingresar'}
           </button>
         </form>
         
