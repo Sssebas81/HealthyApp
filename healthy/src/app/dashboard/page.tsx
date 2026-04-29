@@ -14,7 +14,7 @@ export default function Dashboard() {
   const [objetivo, setObjetivo] = useState<string>('');
   const [generando, setGenerando] = useState<boolean>(false);
   const [mostrarInfoIMC, setMostrarInfoIMC] = useState<boolean>(false);
-  const { user, setUser, preferencias, setPreferencias, agregarPlan } = useApp();
+  const { user, setUser, preferencias, setPreferencias, agregarPlan, actualizarPreferencias } = useApp();
   const router = useRouter();
 
   useEffect(() => {
@@ -58,24 +58,15 @@ export default function Dashboard() {
   };
 
   const guardarPreferencias = (seleccionados: string[]) => {
-    if (user) {
-      const nuevaPreferencia: PreferenciasUsuario = {
-        userId: user.id,
-        itemsSeleccionados: seleccionados
-      };
-      setPreferencias(nuevaPreferencia);
-      
-      const allPreferencias = JSON.parse(localStorage.getItem('preferencias_usuarios') || '[]');
-      const existingIndex = allPreferencias.findIndex((p: PreferenciasUsuario) => p.userId === user.id);
-      
-      if (existingIndex !== -1) {
-        allPreferencias[existingIndex] = nuevaPreferencia;
-      } else {
-        allPreferencias.push(nuevaPreferencia);
-      }
-      
-      localStorage.setItem('preferencias_usuarios', JSON.stringify(allPreferencias));
+    console.log('Guardando preferencias:', seleccionados);
+    console.log('Usuario actual:', user);
+    
+    if (user && user.id) {
+      actualizarPreferencias(user.id, seleccionados);
       setMostrarPreferencias(false);
+    } else {
+      console.error('No hay usuario logueado');
+      alert('Error: No se encontró usuario. Por favor, inicia sesión nuevamente.');
     }
   };
 
@@ -141,7 +132,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-4xl w-full">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold text-gray-800">
-              ¿Que alimentos consumes regularmente?
+              Que alimentos consumes regularmente?
             </h2>
             <button
               onClick={() => setMostrarPreferencias(false)}
@@ -152,7 +143,8 @@ export default function Dashboard() {
           </div>
           <PreferenciasAlimenticias 
             onComplete={guardarPreferencias}
-            initialSeleccionados={preferencias?.itemsSeleccionados}
+            initialSeleccionados={preferencias?.itemsSeleccionados || []}
+            onCancel={() => setMostrarPreferencias(false)}
           />
         </div>
       </div>

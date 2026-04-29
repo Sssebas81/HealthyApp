@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { alimentosPorCategoria, categoriasInfo } from '@/data/alimentos';
 import type { Alimento } from '@/types';
 
@@ -14,13 +14,9 @@ export default function PreferenciasAlimenticias({
   initialSeleccionados = [],
   onCancel 
 }: PreferenciasAlimenticiasProps) {
+  // Inicializar directamente con las props - SIN useEffect
   const [seleccionados, setSeleccionados] = useState<string[]>(initialSeleccionados);
   const [categoriaActiva, setCategoriaActiva] = useState<keyof typeof alimentosPorCategoria>('proteinas');
-
-  // Sincronizar cuando cambian las props
-  useEffect(() => {
-    setSeleccionados(initialSeleccionados);
-  }, [initialSeleccionados]);
 
   const toggleAlimento = (alimentoId: string) => {
     setSeleccionados(prev => {
@@ -54,7 +50,6 @@ export default function PreferenciasAlimenticias({
         </p>
       </div>
 
-      {/* Categorias tabs */}
       <div className="flex flex-wrap gap-2 border-b border-gray-200">
         {(Object.keys(alimentosPorCategoria) as Array<keyof typeof alimentosPorCategoria>).map(categoria => (
           <button
@@ -72,7 +67,6 @@ export default function PreferenciasAlimenticias({
         ))}
       </div>
 
-      {/* Mostrar alimentos de la categoria activa */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-2">
         {alimentosActuales.map((alimento: Alimento) => (
           <label
@@ -99,7 +93,6 @@ export default function PreferenciasAlimenticias({
         ))}
       </div>
 
-      {/* Resumen de seleccionados */}
       {seleccionados.length > 0 && (
         <div className="bg-gray-50 p-4 rounded-lg">
           <h4 className="font-semibold text-gray-700 mb-2">

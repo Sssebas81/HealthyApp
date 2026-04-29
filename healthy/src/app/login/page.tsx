@@ -17,8 +17,16 @@ export default function Login() {
     const user = users.find((u: User) => u.email === email && u.password === password);
     
     if (user) {
+      // Guardar token y usuario
       localStorage.setItem('token', 'fake-jwt-token');
       localStorage.setItem('user', JSON.stringify(user));
+      
+      // También guardar en sessionStorage para respaldo
+      sessionStorage.setItem('user', JSON.stringify(user));
+      
+      console.log('Usuario guardado en localStorage:', user);
+      
+      // Redirigir al dashboard
       router.push('/dashboard');
     } else {
       setError('Credenciales incorrectas');
@@ -65,7 +73,7 @@ export default function Login() {
           
           <button
             type="submit"
-            className="w-full bg-linear-to-r from-green-500 to-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 transition"
+            className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 transition"
           >
             Ingresar
           </button>

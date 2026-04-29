@@ -25,10 +25,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const cargarDatosUsuario = () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('Token encontrado:', !!token);
+      
       if (token) {
         const userData = localStorage.getItem('user');
+        console.log('UserData en localStorage:', userData);
+        
         if (userData) {
           const parsedUser = JSON.parse(userData);
+          console.log('Usuario parseado:', parsedUser);
           setUser(parsedUser);
           
           // Cargar planes del usuario
@@ -39,8 +44,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           // Cargar preferencias del usuario
           const allPreferencias = JSON.parse(localStorage.getItem('preferencias_usuarios') || '[]');
           const userPrefs = allPreferencias.find((p: PreferenciasUsuario) => p.userId === parsedUser.id);
+          console.log('Preferencias cargadas:', userPrefs);
           setPreferencias(userPrefs || null);
+        } else {
+          console.warn('No hay userData en localStorage');
         }
+      } else {
+        console.log('No hay token');
       }
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -49,17 +59,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const actualizarPreferencias = (userId: number, itemsSeleccionados: string[]) => {
     try {
-      console.log('Actualizando preferencias para usuario:', userId, itemsSeleccionados);
+      console.log('Actualizando preferencias para usuario:', userId);
+      console.log('Items seleccionados:', itemsSeleccionados);
       
       const nuevaPreferencia: PreferenciasUsuario = {
         userId: userId,
         itemsSeleccionados: itemsSeleccionados
       };
       
-      // Actualizar estado
       setPreferencias(nuevaPreferencia);
       
-      // Guardar en localStorage
       const allPreferencias = JSON.parse(localStorage.getItem('preferencias_usuarios') || '[]');
       const existingIndex = allPreferencias.findIndex((p: PreferenciasUsuario) => p.userId === userId);
       
@@ -71,12 +80,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       localStorage.setItem('preferencias_usuarios', JSON.stringify(allPreferencias));
       console.log('Preferencias guardadas exitosamente');
-      
-      // Mostrar confirmación
       alert(`Preferencias guardadas! Has seleccionado ${itemsSeleccionados.length} alimentos.`);
     } catch (error) {
       console.error('Error guardando preferencias:', error);
-      alert('Error al guardar preferencias. Por favor intenta de nuevo.');
+      alert('Error al guardar preferencias');
     }
   };
 
@@ -90,6 +97,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    sessionStorage.removeItem('user');
     setUser(null);
     setPlanes([]);
     setPreferencias(null);
