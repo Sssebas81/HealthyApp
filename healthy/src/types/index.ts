@@ -56,4 +56,5 @@ export interface Alimento {
   categoria: 'proteinas' | 'carbohidratos' | 'grasasSaludables' | 'vegetales' | 'frutas' | 'lacteos';
   caloriasPorcion: number;
   porcion: string;
-}
+}export type Preferencias = Record<string, boolean>;
+export interface PlanAlimenticio { desayuno: string; almuerzo: string; cena: string; snacks?: string; }
