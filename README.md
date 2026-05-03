@@ -11,7 +11,7 @@ Aplicacion web para crear planes alimenticios personalizados, con registro de pe
 - Generacion de un plan alimenticio a partir del perfil y preferencias.
 - Chat con Healthy IA para resolver dudas y pedir recomendaciones.
 
-## Happy Path (User Flow)
+## Happy Path
 
 1. Registrate.
 2. Logueate.
