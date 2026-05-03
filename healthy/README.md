@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HealthyApp
 
-## Getting Started
+Aplicacion web para crear planes alimenticios personalizados, con registro de perfil, preferencias y una ayuda de IA integrada.
 
-First, run the development server:
+## Funcionalidades
+
+- Registro y login de usuarios.
+- Perfil con datos basicos de salud (peso y altura).
+- Seleccion de meta personal (por ejemplo, mantener, bajar o subir peso).
+- Seleccion de alimentos preferidos para personalizar recomendaciones.
+- Generacion de un plan alimenticio a partir del perfil y preferencias.
+- Chat con Healthy IA para resolver dudas y pedir recomendaciones.
+
+## Happy Path (User Flow)
+
+1. Registrate.
+2. Logueate.
+3. Selecciona tu peso y altura.
+4. Elige tu meta.
+5. Selecciona tus alimentos preferidos.
+6. Crea tu plan alimenticio.
+7. Habla con Healthy IA.
+
+## Disclaimer
+
+La IA integrada proviene de una API gratuita, por lo que su uso debe ser moderado.
+Se debe de ejecutar el programa dentro de la rama llamada feature/Ia ya que aqui se encuentra la ultima version 
+y esta es la cual esta desplegada
+
+El uso del chat de ia no puede ser usado localmente a menos de tener la api key de gemini como variable de entorno asi que de querer usar este
+por favor probarlo desde la pagina desplegada con su link respectivo ya que ahi se encuentra cargada directamente la api key
+
+## Desarrollo
 
 ```bash
+En caso de no estar en la carpeta del proyecto ejecutar los siguientes 2 comandos en terminal
+ls
+cd healthy/
+
+Instala dependencias y ejecuta el servidor de desarrollo:
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
